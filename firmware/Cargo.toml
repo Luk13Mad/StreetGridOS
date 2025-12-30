@@ -13,3 +13,7 @@ log = "0.4"
 env_logger = "0.10"
 serde_yaml = "0.9.34"
 clap = { version = "4.5.53", features = ["derive"] }
+async-trait = "0.1.89"
+
+[build-dependencies]
+prost-build = "0.12"

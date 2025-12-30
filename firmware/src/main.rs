@@ -1,12 +1,15 @@
 mod types;
 mod node;
 mod config;
+mod comms;
 
-use log::info;
+use log::{info, error};
 use clap::Parser;
 use crate::node::EdgeNode;
 use crate::config::load_config;
+use crate::comms::{LoRaCommunication, CommunicationLayer};
 use anyhow::Result;
+use std::sync::Arc;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -28,7 +31,18 @@ async fn main() -> Result<()> {
     info!("Node ID: {}", config.id);
     info!("Node Type: {:?}", config.node_type);
 
-    let mut node = EdgeNode::new(&config.id, config.node_type, config.relays);
+    let comms: Option<Arc<dyn CommunicationLayer>> = if let Some(comms_config) = config.comms {
+        if let Some(lora_config) = comms_config.lora {
+            info!("Initializing LoRa communication with frequency {}", lora_config.frequency);
+            Some(Arc::new(LoRaCommunication::new(lora_config.frequency)))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let mut node = EdgeNode::new(&config.id, config.node_type, config.relays, comms);
 
     node.run().await;
 
@@ -53,7 +67,7 @@ mod tests {
                 is_closed: true,
             },
         ];
-        let node = EdgeNode::new("test_node", NodeType::Participant, relays);
+        let node = EdgeNode::new("test_node", NodeType::Participant, relays, None);
         assert_eq!(node.relays.len(), 1);
 
         // Check for Grid relay
@@ -81,7 +95,7 @@ mod tests {
                 is_closed: true,
             },
         ];
-        let mut node = EdgeNode::new("test_node", NodeType::Participant, relays);
+        let mut node = EdgeNode::new("test_node", NodeType::Participant, relays, None);
 
         // Ensure everything starts closed
         assert!(node.relays.iter().all(|r| r.is_closed));
@@ -116,7 +130,7 @@ mod tests {
                 is_closed: true,
             },
         ];
-        let mut node = EdgeNode::new("test_node", NodeType::Participant, relays);
+        let mut node = EdgeNode::new("test_node", NodeType::Participant, relays, None);
         node.enter_island_mode();
 
         assert_eq!(node.state, NodeState::Islanded);
