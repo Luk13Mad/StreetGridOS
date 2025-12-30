@@ -10,7 +10,7 @@ pub mod streetgrid {
     include!(concat!(env!("OUT_DIR"), "/streetgrid.rs"));
 }
 
-pub use streetgrid::{NeighborhoodMessage, FeatureReport, NodeType, Heartbeat, LoadShed};
+pub use streetgrid::{NeighborhoodMessage, FeatureReport, Heartbeat, LoadShed};
 
 #[async_trait]
 pub trait CommunicationLayer: Send + Sync {

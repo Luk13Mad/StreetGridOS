@@ -1,6 +1,5 @@
 use crate::types::{Relay, Priority, RelayType, NodeState};
-use crate::config::NodeType;
-use crate::comms::{CommunicationLayer, NeighborhoodMessage, FeatureReport, NodeType as ProtoNodeType};
+use crate::comms::{CommunicationLayer, NeighborhoodMessage, FeatureReport};
 use log::{info, warn, error};
 use std::time::Duration;
 use tokio::time::sleep;
@@ -8,7 +7,6 @@ use std::sync::Arc;
 
 pub struct EdgeNode {
     pub id: String,
-    pub node_type: NodeType,
     pub state: NodeState,
     pub battery_soc: f32,
     pub relays: Vec<Relay>,
@@ -16,10 +14,9 @@ pub struct EdgeNode {
 }
 
 impl EdgeNode {
-    pub fn new(id: &str, node_type: NodeType, relays: Vec<Relay>, comms: Option<Arc<dyn CommunicationLayer>>) -> Self {
+    pub fn new(id: &str, relays: Vec<Relay>, comms: Option<Arc<dyn CommunicationLayer>>) -> Self {
         Self {
             id: id.to_string(),
-            node_type,
             state: NodeState::Normal,
             battery_soc: 1.0,
             relays,
@@ -32,14 +29,8 @@ impl EdgeNode {
 
         // Send Initial Setup Message (Feature Report)
         if let Some(comms) = &self.comms {
-            let proto_node_type = match self.node_type {
-                NodeType::Participant => ProtoNodeType::Participant,
-                NodeType::Managing => ProtoNodeType::Managing,
-            };
-
             let feature_report = FeatureReport {
                 node_id: self.id.clone(),
-                node_type: proto_node_type as i32,
                 features: self.relays.iter().map(|r| r.relay_type.clone() as i32).map(|t| t.to_string()).collect(), // Just sending relay types as features for now
             };
 
