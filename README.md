@@ -1,6 +1,52 @@
 # StreetGridOS
 🛡️ Project StreetGrid OS
 A Decentralized, Software-Defined Microgrid for Community Resilience
+
+## Status: MVP In Progress
+We are building the foundational blocks for the StreetGrid OS.
+*   **M1: Digital Twin (Simulation):** Python model verifying load balancing logic.
+*   **M1.5: Firmware Skeleton (Rust):** Initial structure for the Edge Node on Raspberry Pi Zero.
+*   **Orchestrator Skeleton (Go):** Initial structure for the central coordinator.
+
+### 1. Simulation (The Digital Twin)
+The simulation models the energy physics and control logic of a neighborhood.
+*   **Location:** `simulation/`
+*   **Run:**
+    ```bash
+    cd simulation
+    pip install -r requirements.txt
+    python3 src/main.py scenarios/grid_failure.json
+    ```
+
+### 2. Firmware (The Edge Node)
+The firmware runs on the Raspberry Pi Zero 2W at each house. It handles safety (relays) and telemetry.
+*   **Location:** `firmware/`
+*   **Language:** Rust
+*   **Configuration:** The firmware now loads its definition (relays, type, priority) from a YAML config file.
+*   **Run with Config:**
+    ```bash
+    cd firmware
+    cargo run -- config_example.yaml
+    ```
+*   **Build & Test:**
+    ```bash
+    cd firmware
+    cargo build
+    cargo test
+    ```
+
+### 3. Orchestrator (The Coordinator)
+The orchestrator manages the high-level state of the microgrid.
+*   **Location:** `orchestrator/`
+*   **Language:** Go
+*   **Run:**
+    ```bash
+    cd orchestrator
+    go run cmd/main.go
+    ```
+
+---
+
 1. Vision Statement
 To transform a standard residential street into a self-sustaining "energy island" during national grid failures. By leveraging distributed informatics and resilient hardware, StreetGrid OS enables neighbors to pool solar and battery resources to maintain "near-normal" functionality through cooperative load-balancing and frequency-based control.
 2. The Core Technical Architecture
@@ -35,13 +81,13 @@ D. The Intelligence Layer
  * Language: Rust for the Edge (sensing/safety) to ensure memory safety and zero garbage collection overhead. Go for the Orchestrator/UX (high-level logic and dashboarding).
  * State Machine: A control loop that monitors the microgrid’s "heartbeat" and sheds load (via smart relays) if energy scarcity is detected.
 3. MVP Roadmap & Milestones
-| Milestone | Phase | Key Deliverable |
-|---|---|---|
-| M1: The Digital Twin | Simulation | Python/Julia model proving that 10 houses can balance load/supply without crashing. |
-| M1.5: The Hardware Interface | Safety | Rust code successfully toggling a relay and reading an ADC on the Pi Zero without corruption or crashes. |
-| M2: The Shadow Meter | Edge Hardware | RPi Zero 2W successfully reading real-time household wattage via Rust. |
-| M3: The Silent Pulse | Communication | Two nodes exchanging state-of-charge packets via LoRa (P2P) with <1s latency. |
-| M4: The Load Shed | Integration | A "Master" node successfully triggers a relay in a "Neighbor" node based on simulated energy scarcity. |
+| Milestone | Phase | Key Deliverable | Status |
+|---|---|---|---|
+| M1: The Digital Twin | Simulation | Python model proving that 10 houses can balance load/supply without crashing. | ✅ Completed |
+| M1.5: The Hardware Interface | Safety | Rust code successfully toggling a relay and reading an ADC on the Pi Zero. | 🚧 In Progress |
+| M2: The Shadow Meter | Edge Hardware | RPi Zero 2W successfully reading real-time household wattage via Rust. | |
+| M3: The Silent Pulse | Communication | Two nodes exchanging state-of-charge packets via LoRa (P2P) with <1s latency. | |
+| M4: The Load Shed | Integration | A "Master" node successfully triggers a relay in a "Neighbor" node based on simulated energy scarcity. | |
 4. Key Considerations for Success
 ⚡ Energy Efficiency
  * Rust vs Go: Use Rust for edge nodes to keep CPU usage <1%, allowing longer operation on backup batteries.

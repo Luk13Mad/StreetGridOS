@@ -1,0 +1,33 @@
+id: "node_01"
+node_type: "participant"
+relays:
+  - id: "r_grid"
+    name: "Main Grid Tie"
+    relay_type: Grid
+    priority: Critical
+    amperage: 100.0
+    is_closed: true
+  - id: "r_batt"
+    name: "Battery Bank"
+    relay_type: Source
+    priority: Critical
+    amperage: 30.0
+    is_closed: true
+  - id: "r_crit"
+    name: "Critical Panel"
+    relay_type: Load
+    priority: Critical
+    amperage: 15.0
+    is_closed: true
+  - id: "r_hvac"
+    name: "HVAC"
+    relay_type: Load
+    priority: Medium
+    amperage: 20.0
+    is_closed: true
+  - id: "r_aux"
+    name: "Living Room Outlets"
+    relay_type: Load
+    priority: Low
+    amperage: 10.0
+    is_closed: true
