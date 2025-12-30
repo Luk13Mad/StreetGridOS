@@ -1,5 +1,11 @@
 id: "node_01"
 node_type: "Participant"
+comms:
+  lora:
+    frequency: 915000000
+    bandwidth: 125000
+    tx_power: 14
+    spreading_factor: 7
 relays:
   - id: "r_grid"
     name: "Main Grid Tie"

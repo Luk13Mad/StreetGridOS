@@ -1,8 +1,10 @@
 use crate::types::{Relay, Priority, RelayType, NodeState};
 use crate::config::NodeType;
-use log::{info, warn};
+use crate::comms::{CommunicationLayer, NeighborhoodMessage, FeatureReport, NodeType as ProtoNodeType};
+use log::{info, warn, error};
 use std::time::Duration;
 use tokio::time::sleep;
+use std::sync::Arc;
 
 pub struct EdgeNode {
     pub id: String,
@@ -10,21 +12,45 @@ pub struct EdgeNode {
     pub state: NodeState,
     pub battery_soc: f32,
     pub relays: Vec<Relay>,
+    pub comms: Option<Arc<dyn CommunicationLayer>>,
 }
 
 impl EdgeNode {
-    pub fn new(id: &str, node_type: NodeType, relays: Vec<Relay>) -> Self {
+    pub fn new(id: &str, node_type: NodeType, relays: Vec<Relay>, comms: Option<Arc<dyn CommunicationLayer>>) -> Self {
         Self {
             id: id.to_string(),
             node_type,
             state: NodeState::Normal,
             battery_soc: 1.0,
             relays,
+            comms,
         }
     }
 
     pub async fn run(&mut self) {
         info!("Node {} starting up...", self.id);
+
+        // Send Initial Setup Message (Feature Report)
+        if let Some(comms) = &self.comms {
+            let proto_node_type = match self.node_type {
+                NodeType::Participant => ProtoNodeType::Participant,
+                NodeType::Managing => ProtoNodeType::Managing,
+            };
+
+            let feature_report = FeatureReport {
+                node_id: self.id.clone(),
+                node_type: proto_node_type as i32,
+                features: self.relays.iter().map(|r| r.relay_type.clone() as i32).map(|t| t.to_string()).collect(), // Just sending relay types as features for now
+            };
+
+            let msg = NeighborhoodMessage {
+                payload: Some(crate::comms::streetgrid::neighborhood_message::Payload::FeatureReport(feature_report)),
+            };
+
+            if let Err(e) = comms.send(msg).await {
+                error!("Failed to send initial feature report: {}", e);
+            }
+        }
 
         loop {
             self.tick().await;
