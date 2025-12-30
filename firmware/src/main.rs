@@ -7,7 +7,7 @@ use log::{info, error};
 use clap::Parser;
 use crate::node::EdgeNode;
 use crate::config::load_config;
-use crate::comms::{LoRaCommunication, CommunicationLayer};
+use crate::comms::{LoRaCommunication, CommunicationLayer, OrchestratorClient};
 use anyhow::Result;
 use std::sync::Arc;
 
@@ -30,10 +30,11 @@ async fn main() -> Result<()> {
     info!("StreetGrid Firmware v0.1.0 - Multi-Relay Support");
     info!("Node ID: {}", config.id);
 
-    let comms: Option<Arc<dyn CommunicationLayer>> = if let Some(comms_config) = config.comms {
+    let client: Option<OrchestratorClient> = if let Some(comms_config) = config.comms {
         if let Some(lora_config) = comms_config.lora {
             info!("Initializing LoRa communication with frequency {}", lora_config.frequency);
-            Some(Arc::new(LoRaCommunication::new(lora_config.frequency)))
+            let layer = Arc::new(LoRaCommunication::new(lora_config.frequency));
+            Some(OrchestratorClient::new(layer))
         } else {
             None
         }
@@ -41,7 +42,7 @@ async fn main() -> Result<()> {
         None
     };
 
-    let mut node = EdgeNode::new(&config.id, config.relays, comms);
+    let mut node = EdgeNode::new(&config.id, config.relays, client);
 
     node.run().await;
 
