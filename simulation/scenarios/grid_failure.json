@@ -1,0 +1,8 @@
+{
+  "scenario_name": "Grid Failure - 10 Homes",
+  "duration_hours": 24,
+  "nodes": [
+    {"id": "node_01", "type": "anchor", "battery_capacity_kwh": 13.5},
+    {"id": "node_02", "type": "participant", "battery_capacity_kwh": 0}
+  ]
+}
