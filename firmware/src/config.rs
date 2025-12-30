@@ -4,15 +4,8 @@ use anyhow::Result;
 use crate::types::Relay;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum NodeType {
-    Participant,
-    Managing,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub id: String,
-    pub node_type: NodeType,
     pub relays: Vec<Relay>,
     pub comms: Option<CommsConfig>,
 }

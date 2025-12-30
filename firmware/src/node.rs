@@ -1,29 +1,25 @@
 use crate::types::{Relay, Priority, RelayType, NodeState};
-use crate::config::NodeType;
-use crate::comms::{CommunicationLayer, NeighborhoodMessage, FeatureReport, NodeType as ProtoNodeType};
+use crate::comms::{IncomingCommand, OrchestratorClient};
 use log::{info, warn, error};
 use std::time::Duration;
 use tokio::time::sleep;
-use std::sync::Arc;
 
 pub struct EdgeNode {
     pub id: String,
-    pub node_type: NodeType,
     pub state: NodeState,
     pub battery_soc: f32,
     pub relays: Vec<Relay>,
-    pub comms: Option<Arc<dyn CommunicationLayer>>,
+    pub client: Option<OrchestratorClient>,
 }
 
 impl EdgeNode {
-    pub fn new(id: &str, node_type: NodeType, relays: Vec<Relay>, comms: Option<Arc<dyn CommunicationLayer>>) -> Self {
+    pub fn new(id: &str, relays: Vec<Relay>, client: Option<OrchestratorClient>) -> Self {
         Self {
             id: id.to_string(),
-            node_type,
             state: NodeState::Normal,
             battery_soc: 1.0,
             relays,
-            comms,
+            client,
         }
     }
 
@@ -31,30 +27,67 @@ impl EdgeNode {
         info!("Node {} starting up...", self.id);
 
         // Send Initial Setup Message (Feature Report)
-        if let Some(comms) = &self.comms {
-            let proto_node_type = match self.node_type {
-                NodeType::Participant => ProtoNodeType::Participant,
-                NodeType::Managing => ProtoNodeType::Managing,
-            };
+        if let Some(client) = &self.client {
+            let features: Vec<String> = self.relays.iter()
+                .map(|r| r.relay_type.clone() as i32)
+                .map(|t| t.to_string())
+                .collect();
 
-            let feature_report = FeatureReport {
-                node_id: self.id.clone(),
-                node_type: proto_node_type as i32,
-                features: self.relays.iter().map(|r| r.relay_type.clone() as i32).map(|t| t.to_string()).collect(), // Just sending relay types as features for now
-            };
-
-            let msg = NeighborhoodMessage {
-                payload: Some(crate::comms::streetgrid::neighborhood_message::Payload::FeatureReport(feature_report)),
-            };
-
-            if let Err(e) = comms.send(msg).await {
+            if let Err(e) = client.send_feature_report(&self.id, features).await {
                 error!("Failed to send initial feature report: {}", e);
             }
         }
 
+        let mut last_heartbeat = std::time::Instant::now();
+
         loop {
             self.tick().await;
+
+            let mut received_cmd = None;
+            let mut should_send_heartbeat = false;
+
+            if let Some(client) = &self.client {
+                // Poll for messages
+                if let Ok(Some(cmd)) = client.receive().await {
+                    received_cmd = Some(cmd);
+                }
+
+                // Check heartbeat
+                if last_heartbeat.elapsed() > Duration::from_secs(60) {
+                     should_send_heartbeat = true;
+                }
+            }
+
+            if let Some(cmd) = received_cmd {
+                 match cmd {
+                    IncomingCommand::LoadShed(ls) => self.handle_load_shed_command(ls),
+                }
+            }
+
+            if should_send_heartbeat {
+                 if let Some(client) = &self.client {
+                     if let Err(e) = client.send_heartbeat(&self.id, self.battery_soc).await {
+                         error!("Failed to send heartbeat: {}", e);
+                     }
+                     last_heartbeat = std::time::Instant::now();
+                 }
+            }
+
             sleep(Duration::from_secs(1)).await;
+        }
+    }
+
+    fn handle_load_shed_command(&mut self, cmd: crate::comms::LoadShed) {
+        if cmd.target_node_id == self.id {
+            if cmd.shed_load {
+                warn!("Received LoadShed command!");
+                // Shed Medium priority and below? Or just call shed_load with a default?
+                // The prompt says "Shed Non-Critical Loads".
+                // I'll assume shedding Medium and Low.
+                self.shed_load(Priority::Medium);
+            } else {
+                info!("Received LoadRestore command (ignored for now)");
+            }
         }
     }
 

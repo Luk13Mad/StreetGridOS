@@ -2,11 +2,6 @@ syntax = "proto3";
 
 package streetgrid;
 
-enum NodeType {
-  PARTICIPANT = 0;
-  MANAGING = 1;
-}
-
 message Heartbeat {
   string node_id = 1;
   int64 timestamp = 2;
@@ -20,7 +15,6 @@ message LoadShed {
 
 message FeatureReport {
   string node_id = 1;
-  NodeType node_type = 2;
   repeated string features = 3;
 }
 
