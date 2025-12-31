@@ -3,8 +3,21 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
 pub enum NodeState {
     Normal,
+    AlertSent,  // Waiting for orchestrator response after voltage drop
     Islanded,
     BlackStart,
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub enum MeshType {
+    AdHoc,              // Option 1: Node disconnects from utility grid
+    GovernmentSanctioned, // Option 2: MID handles isolation, node keeps grid connected
+}
+
+impl Default for MeshType {
+    fn default() -> Self {
+        MeshType::AdHoc
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

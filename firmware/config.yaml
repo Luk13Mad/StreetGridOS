@@ -1,5 +1,6 @@
 id: "node_01"
 node_type: "Participant"
+mesh_type: "AdHoc"  # Options: AdHoc or GovernmentSanctioned
 comms:
   lora:
     frequency: 915000000
@@ -37,3 +38,18 @@ relays:
     priority: "Low"
     amperage: 10.0
     is_closed: true
+
+# Hardware pin mappings for Raspberry Pi
+hardware:
+  relay_pins:
+    r_grid: 17
+    r_batt: 27
+    r_crit: 22
+    r_hvac: 23
+    r_aux: 24
+  adc:
+    i2c_bus: 1
+    address: 0x48
+    ct_ratio: 100.0
+    voltage_ref: 120.0
+    burden_resistor: 33.0

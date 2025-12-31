@@ -17,3 +17,9 @@ async-trait = "0.1.89"
 
 [build-dependencies]
 prost-build = "0.12"
+
+# Raspberry Pi / Linux specific dependencies
+[target.'cfg(target_os = "linux")'.dependencies]
+rppal = "0.18"
+ads1x1x = "0.3"
+linux-embedded-hal = "0.4"

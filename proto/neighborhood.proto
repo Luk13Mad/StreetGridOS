@@ -13,9 +13,45 @@ message LoadShed {
   bool shed_load = 2;
 }
 
+// Relay metadata for orchestrator decision-making
+message RelayInfo {
+  uint32 index = 1;         // Position in relay vector
+  string id = 2;            // Unique ID (e.g., "r_grid")
+  string name = 3;          // Human-readable name (e.g., "Main Grid Tie")
+  int32 relay_type = 4;     // 0=Source, 1=Load, 2=Grid
+  int32 priority = 5;       // 0=Critical, 1=High, 2=Medium, 3=Low
+  float amperage = 6;       // Max capacity or current draw in amps
+  bool is_closed = 7;       // Current state
+}
+
 message FeatureReport {
   string node_id = 1;
-  repeated string features = 3;
+  repeated RelayInfo relays = 2;
+  string mesh_type = 3;     // "AdHoc" or "GovernmentSanctioned"
+}
+
+message VoltageAlert {
+  string node_id = 1;
+  float voltage = 2;
+  int64 timestamp = 3;
+}
+
+message EnterIsland {
+  string target_node_id = 1;
+}
+
+message EnterBlackStart {
+  string target_node_id = 1;
+}
+
+message ActivateRelayByIndex {
+  string target_node_id = 1;
+  uint32 relay_index = 2;
+}
+
+message ActivateRelayByPriority {
+  string target_node_id = 1;
+  int32 priority = 2;  // 0=Critical, 1=High, 2=Medium, 3=Low
 }
 
 message NeighborhoodMessage {
@@ -23,5 +59,11 @@ message NeighborhoodMessage {
     Heartbeat heartbeat = 1;
     LoadShed load_shed = 2;
     FeatureReport feature_report = 3;
+    VoltageAlert voltage_alert = 4;
+    EnterIsland enter_island = 5;
+    EnterBlackStart enter_black_start = 6;
+    ActivateRelayByIndex activate_relay_by_index = 7;
+    ActivateRelayByPriority activate_relay_by_priority = 8;
   }
 }
+

@@ -1,16 +1,18 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use prost::Message;
-use log::{info, warn, debug};
+use log::info;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 // Include the generated proto modules
 pub mod streetgrid {
     include!(concat!(env!("OUT_DIR"), "/streetgrid.rs"));
 }
 
-pub use streetgrid::{NeighborhoodMessage, FeatureReport, Heartbeat, LoadShed};
+pub use streetgrid::{
+    NeighborhoodMessage, FeatureReport, Heartbeat, LoadShed, VoltageAlert, RelayInfo,
+    EnterIsland, EnterBlackStart, ActivateRelayByIndex, ActivateRelayByPriority
+};
 
 #[async_trait]
 pub trait CommunicationLayer: Send + Sync {
@@ -20,6 +22,10 @@ pub trait CommunicationLayer: Send + Sync {
 
 pub enum IncomingCommand {
     LoadShed(LoadShed),
+    EnterIsland(EnterIsland),
+    EnterBlackStart(EnterBlackStart),
+    ActivateRelayByIndex(ActivateRelayByIndex),
+    ActivateRelayByPriority(ActivateRelayByPriority),
 }
 
 pub struct OrchestratorClient {
@@ -45,14 +51,31 @@ impl OrchestratorClient {
         self.layer.send(msg).await
     }
 
-    pub async fn send_feature_report(&self, node_id: &str, features: Vec<String>) -> Result<()> {
+    pub async fn send_feature_report(&self, node_id: &str, relays: Vec<RelayInfo>, mesh_type: &str) -> Result<()> {
+        info!("Sending FeatureReport with {} relays", relays.len());
         let report = FeatureReport {
             node_id: node_id.to_string(),
-            features,
+            relays,
+            mesh_type: mesh_type.to_string(),
         };
         let msg = NeighborhoodMessage {
             payload: Some(streetgrid::neighborhood_message::Payload::FeatureReport(report)),
         };
+        self.layer.send(msg).await
+    }
+
+    pub async fn send_voltage_alert(&self, node_id: &str, voltage: f32) -> Result<()> {
+        let alert = VoltageAlert {
+            node_id: node_id.to_string(),
+            voltage,
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_secs() as i64,
+        };
+        let msg = NeighborhoodMessage {
+            payload: Some(streetgrid::neighborhood_message::Payload::VoltageAlert(alert)),
+        };
+        info!("Sending VoltageAlert: voltage={} for node {}", voltage, node_id);
         self.layer.send(msg).await
     }
 
@@ -63,7 +86,19 @@ impl OrchestratorClient {
                 Some(streetgrid::neighborhood_message::Payload::LoadShed(ls)) => {
                     Ok(Some(IncomingCommand::LoadShed(ls)))
                 }
-                _ => Ok(None), // Ignore other messages
+                Some(streetgrid::neighborhood_message::Payload::EnterIsland(ei)) => {
+                    Ok(Some(IncomingCommand::EnterIsland(ei)))
+                }
+                Some(streetgrid::neighborhood_message::Payload::EnterBlackStart(ebs)) => {
+                    Ok(Some(IncomingCommand::EnterBlackStart(ebs)))
+                }
+                Some(streetgrid::neighborhood_message::Payload::ActivateRelayByIndex(ar)) => {
+                    Ok(Some(IncomingCommand::ActivateRelayByIndex(ar)))
+                }
+                Some(streetgrid::neighborhood_message::Payload::ActivateRelayByPriority(arp)) => {
+                    Ok(Some(IncomingCommand::ActivateRelayByPriority(arp)))
+                }
+                _ => Ok(None), // Ignore other messages (heartbeat, feature report, etc.)
             },
             None => Ok(None),
         }
